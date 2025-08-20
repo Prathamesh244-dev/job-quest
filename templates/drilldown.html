@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/data.js"></script>
+    <script src="https://code.highcharts.com/modules/drilldown.js"></script>
+    <style>
+        :root {
+--theme-color: #FE722C;
+}
+#container {
+height: 500px;
+}
+
+.header {
+text-align: center;
+background-color: #f2f2f2;
+padding: 20px;
+margin-bottom: 20px;
+}
+
+.header h1 {
+margin: 0;
+font-size: 24px;
+
+}
+
+.navbar {
+text-align: center;
+}
+
+.navbar ul {
+list-style-type: none;
+padding: 0;
+}
+
+.navbar ul li {
+display: inline-block;
+margin-right: 10px;
+}
+
+.navbar ul li a {
+text-decoration: none;
+color: #333;
+padding: 5px 10px;
+border: 1px solid #ccc;
+border-radius: 5px;
+transition: background-color 0.3s;
+}
+
+.navbar ul li a.active {
+background-color: #337ab7;
+color: #fff;
+}
+
+.highcharts-figure,
+.highcharts-data-table table {
+min-width: 310px;
+max-width: 800px;
+margin: 1em auto;
+}
+
+#container {
+height: 400px;
+}
+
+body {
+margin: 0;
+font-family: Arial, sans-serif;
+}
+.header {
+text-align: center;
+background-color: var(--theme-color);
+padding: 20px;
+margin-bottom: 20px;
+color: #fff;
+}
+
+.header h1 {
+margin: 0;
+font-size: 24px;
+}
+
+.navbar {
+text-align: center;
+background-color: #f2f2f2;
+padding: 10px 0;
+margin-bottom: 20px;
+}
+
+.navbar ul {
+list-style-type: none;
+padding: 0;
+margin: 0;
+}
+
+.navbar ul li {
+display: inline-block;
+}
+
+.navbar ul li a {
+text-decoration: none;
+color: #333;
+padding: 10px 20px;
+border-radius: 5px;
+transition: background-color 0.3s;
+}
+
+.navbar ul li a.active {
+background-color: var(--theme-color);
+color: #fff;
+}
+
+
+.highcharts-data-table table {
+font-family: Verdana, sans-serif;
+border-collapse: collapse;
+border: 1px solid #ebebeb;
+margin: 10px auto;
+text-align: center;
+width: 100%;
+max-width: 500px;
+}
+
+.highcharts-data-table caption {
+padding: 1em 0;
+font-size: 1.2em;
+color: #555;
+}
+
+.highcharts-data-table th {
+font-weight: 600;
+padding: 0.5em;
+}
+
+.highcharts-data-table td,
+.highcharts-data-table th,
+.highcharts-data-table caption {
+padding: 0.5em;
+}
+
+.highcharts-data-table thead tr,
+.highcharts-data-table tr:nth-child(even) {
+background: #f8f8f8;
+}
+
+.highcharts-data-table tr:hover {
+background: #f1f7ff;
+}
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Data Visualization</h1>
+    </div>
+    <!-- Navbar section -->
+    <nav class="navbar">
+        <ul>
+            <!-- Links for different chart types -->
+            <li><a href="/visualize" >Pie Chart</a></li>
+            <li><a href="javascript:void(0);" onclick="renderBarGraph(); setActiveLink(this);" class="active">Bar Graph</a></li>
+            <li><a href="/visualizestackedbar">Stacked Bar Graph</a></li>
+            <li><a href="/visualizewordbubble">Word Bubble</a></li>
+        </ul>
+    </nav>
+    <figure class="highcharts-figure">
+        <div id="container"></div>
+    </figure>
+    <script>
+        function setActiveLink(link) {
+            document.querySelectorAll('.navbar ul li a').forEach(function (a) {
+                a.classList.remove('active');
+            });
+            link.classList.add('active');
+        }
+
+        function renderBarGraph() {
+            fetch('/static/data.json')
+    .then(response => response.json())
+    .then(data => {
+        // Extract locations from JSON data
+        const locations = data.map(entry => entry['company location']);
+
+        // Count occurrences of each location
+        const locationCounts = locations.reduce((acc, location) => {
+            acc[location] = (acc[location] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Sort locations by count in descending order
+        const sortedLocations = Object.keys(locationCounts).sort((a, b) => locationCounts[b] - locationCounts[a]);
+
+        // Take top 5 locations
+        const top5Locations = sortedLocations.slice(0, 5);
+
+        // Create data for initial chart
+        const chartData = top5Locations.map(location => ({
+            name: location,
+            y: locationCounts[location],
+            drilldown: location // Set drilldown to location name
+        }));
+
+        // Define colors for bars
+        const colors = ["#2caffe", "#544fc5", "#00e272", "#fe6a35", "#6b8abc", "#d568fb", "#2ee0ca", "#fa4b42", "#feb56a", "#91e8e1"];
+
+        // Plot the initial data using Highcharts
+        const chart = Highcharts.chart('container', {
+            chart: {
+                type: 'column',
+                events: {
+                    drilldown: function (e) {
+                        if (!e.seriesOptions) {
+                            const clickedLocation = e.point.name;
+                            const filteredData = data.filter(entry => entry['company location'] === clickedLocation);
+                            const skills = filteredData.map(entry => entry['skills']).join(',').split(',');
+                            const skillCounts = skills.reduce((acc, skill) => {
+                                acc[skill] = (acc[skill] || 0) + 1;
+                                return acc;
+                            }, {});
+                            const sortedSkills = Object.keys(skillCounts).sort((a, b) => skillCounts[b] - skillCounts[a]);
+                            const top5Skills = sortedSkills.slice(0,10 );
+                            const drilldownData = top5Skills.map(skill => ({
+                                name: skill,
+                                y: skillCounts[skill]
+                            }));
+                            this.addSeriesAsDrilldown(e.point, {
+                                name: clickedLocation,
+                                data: drilldownData
+                            });
+                        }
+                    }
+                }
+            },
+            title: {
+                text: 'Top 5 Company Locations'
+            },
+            xAxis: {
+                type: 'category',
+                title: {
+                    text: 'Location'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Count'
+                }
+            },
+            series: [{
+                name: 'Count',
+                data: chartData,
+                colorByPoint: true,
+                colors: colors // Assigning colors
+            }],
+            drilldown: {
+                series: []
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching data:', error);
+    });
+        }
+
+        renderBarGraph(); // Render bar graph by default on page load
+    </script>
+</body>
+
+</html>

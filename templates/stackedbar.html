@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <style>
+        :root {
+--theme-color: #FE722C;
+}
+#container {
+height: 800px;
+}
+
+.header {
+text-align: center;
+background-color: #f2f2f2;
+padding: 20px;
+margin-bottom: 20px;
+}
+
+.header h1 {
+margin: 0;
+font-size: 24px;
+
+}
+
+.navbar {
+text-align: center;
+}
+
+.navbar ul {
+list-style-type: none;
+padding: 0;
+}
+
+.navbar ul li {
+display: inline-block;
+margin-right: 10px;
+}
+
+.navbar ul li a {
+text-decoration: none;
+color: #333;
+padding: 5px 10px;
+border: 1px solid #ccc;
+border-radius: 5px;
+transition: background-color 0.3s;
+}
+
+.navbar ul li a.active {
+background-color: #337ab7;
+color: #fff;
+}
+
+.highcharts-figure,
+.highcharts-data-table table {
+min-width: 310px;
+max-width: 800px;
+margin: 1em auto;
+}
+
+#container {
+height: 700px;
+}
+
+body {
+margin: 0;
+font-family: Arial, sans-serif;
+}
+.header {
+text-align: center;
+background-color: var(--theme-color);
+padding: 20px;
+margin-bottom: 20px;
+color: #fff;
+}
+
+.header h1 {
+margin: 0;
+font-size: 24px;
+}
+
+.navbar {
+text-align: center;
+background-color: #f2f2f2;
+padding: 10px 0;
+margin-bottom: 20px;
+}
+
+.navbar ul {
+list-style-type: none;
+padding: 0;
+margin: 0;
+}
+
+.navbar ul li {
+display: inline-block;
+}
+
+.navbar ul li a {
+text-decoration: none;
+color: #333;
+padding: 10px 20px;
+border-radius: 5px;
+transition: background-color 0.3s;
+}
+
+.navbar ul li a.active {
+background-color: var(--theme-color);
+color: #fff;
+}
+
+
+.highcharts-data-table table {
+font-family: Verdana, sans-serif;
+border-collapse: collapse;
+border: 1px solid #ebebeb;
+margin: 10px auto;
+text-align: center;
+width: 100%;
+max-width: 500px;
+}
+
+.highcharts-data-table caption {
+padding: 1em 0;
+font-size: 1.2em;
+color: #555;
+}
+
+.highcharts-data-table th {
+font-weight: 600;
+padding: 0.5em;
+}
+
+.highcharts-data-table td,
+.highcharts-data-table th,
+.highcharts-data-table caption {
+padding: 0.5em;
+}
+
+.highcharts-data-table thead tr,
+.highcharts-data-table tr:nth-child(even) {
+background: #f8f8f8;
+}
+
+.highcharts-data-table tr:hover {
+background: #f1f7ff;
+}
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Data Visualization</h1>
+    </div>
+    <nav class="navbar">
+        <ul>
+            <!-- Links for different chart types -->
+            <li><a href="/visualize" >Pie Chart</a></li>
+            <li><a href="/visualizedrilldown" >Bar Graph</a></li>
+            <li><a href="javascript:void(0)" onclick="renderStackedBar(); setActiveLink(this);" class="active" >Stacked Bar Graph</a></li>
+            <li><a href="/visualizewordbubble">Word Bubble</a></li>
+        </ul>
+    </nav>
+    <figure class="highcharts-figure">
+        <div id="container"></div>
+    </figure>
+    <script>
+         function setActiveLink(link) {
+            document.querySelectorAll('.navbar ul li a').forEach(function (a) {
+                a.classList.remove('active');
+            });
+            link.classList.add('active');
+        }
+
+        function renderStackedBar() {
+            fetch('/static/data.json')
+    .then(response => response.json())
+    .then(data => {
+        // Parse the JSON data
+        const jsonData = data;
+
+        // Group data by location and skill
+        const locationSkillCounts = {};
+        jsonData.forEach(entry => {
+            const location = entry['company name'];
+            const skills = entry['skills'].split(',').map(skill => skill.trim());
+            if (!locationSkillCounts[location]) {
+                locationSkillCounts[location] = {};
+            }
+            skills.forEach(skill => {
+                locationSkillCounts[location][skill] = (locationSkillCounts[location][skill] || 0) + 1;
+            });
+        });
+
+        // Prepare data for Highcharts
+        const categories = Object.keys(locationSkillCounts);
+        const seriesData = Object.keys(locationSkillCounts[Object.keys(locationSkillCounts)[0]]).map(skill => {
+            return {
+                name: skill,
+                data: categories.map(location => locationSkillCounts[location][skill] || 0)
+            };
+        });
+
+        // Highcharts configuration
+        Highcharts.chart('container', {
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Counts of Locations'
+
+            },
+            xAxis: {
+                categories: categories,
+                crosshair: true
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: 'Skill Count'
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+                pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                    '<td style="padding:0"><b>{point.y}</b></td></tr>',
+                footerFormat: '</table>',
+                shared: true,
+                useHTML: true
+            },
+            plotOptions: {
+                column: {
+                    stacking: 'normal'
+                }
+            },
+            series: seriesData
+        });
+    })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+    });
+        }
+
+        renderStackedBar(); // Render bar graph by default on page load
+
+        
+    </script>
+</body>
+</html>
